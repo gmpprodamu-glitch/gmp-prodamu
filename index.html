@@ -6,6 +6,9 @@
     <title>GMP PRODAMU</title>
     <meta name="description" content="Prontuário Guardiã Maria da Penha — acesso institucional" />
     <meta name="theme-color" content="#1B3A6B" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="GMP PRODAMU" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
@@ -18,7 +21,6 @@
     <style>
       :root {
         --gmp-blue: #1b3a6b;
-        --gmp-gold: #c8a24b;
         --bg: #f4f6fa;
       }
       * { box-sizing: border-box; }
@@ -69,8 +71,15 @@
         background: #eef2f9;
         border: 1px solid #d4dce8;
       }
+      .btn-install {
+        color: #8e244d;
+        background: #fdf1f5;
+        border: 1px solid #e8b9c8;
+      }
+      .hidden { display: none !important; }
       .hint { margin: 16px 0 0; font-size: 12px; color: #5a6472; }
       .hint.small { margin-top: 8px; font-size: 11px; color: #8a94a3; }
+      .ios-step { display: block; margin: 2px 0; }
     </style>
   </head>
   <body>
@@ -82,10 +91,11 @@
       <a
         class="btn btn-primary"
         id="entrar"
-        href="https://apps.powerapps.com/play/e/69d66729-9a82-e2ab-b79b-65bfa9cc1ce8/app/37e0c391-9ece-478f-918e-57d0c05ca2c7?tenantId=90dd5b64-e710-4d3f-bbec-59427ccb45a9"
+        href="https://apps.powerapps.com/play/e/69d66729-9a82-e2ab-b79b-65bfa9cc1ce8/app/37e0c391-9ece-478f-918e-57d0c05ca2c7?tenantId=90dd5b64-e710-4d3f-bbec-59427ccb45a9&hideNavBar=true"
         rel="noopener"
         >ENTRAR NO GMP</a
       >
+      <button class="btn btn-install hidden" id="instalar" type="button">INSTALAR GMP</button>
       <a
         class="btn btn-secondary"
         id="trocar"
@@ -94,18 +104,65 @@
         >TROCAR CONTA MICROSOFT</a
       >
       <p class="hint">Use sua conta institucional autorizada.</p>
-      <p class="hint small">
-        Precisa de outra conta? Use TROCAR CONTA MICROSOFT, ou saia da conta atual / abra em
-        navegação privada e entre com seu e-mail institucional.
+      <p class="hint small hidden" id="ios-hint">
+        No iPhone, toque em Compartilhar <span class="ios-step">→</span> Adicionar à Tela de Início para
+        instalar o GMP PRODAMU.
       </p>
     </main>
     <script>
-      // Garantia extra: o botão principal nunca aponta para make.powerapps.com.
-      document.getElementById("entrar").addEventListener("click", function (event) {
-        if (this.href.indexOf("make.powerapps.com") !== -1) {
-          event.preventDefault();
-        }
+      // Único destino de execução: player oficial do Code App (nunca o Maker Portal).
+      const REAL_PLAY_URL =
+        "https://apps.powerapps.com/play/e/69d66729-9a82-e2ab-b79b-65bfa9cc1ce8/app/37e0c391-9ece-478f-918e-57d0c05ca2c7?tenantId=90dd5b64-e710-4d3f-bbec-59427ccb45a9&hideNavBar=true";
+
+      const entrar = document.getElementById("entrar");
+      const instalarBtn = document.getElementById("instalar");
+      const iosHint = document.getElementById("ios-hint");
+
+      if (entrar.href.indexOf("make.powerapps.com") !== -1) {
+        entrar.setAttribute("href", REAL_PLAY_URL);
+      }
+
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const launchedFromPwa = new URLSearchParams(window.location.search).get("launch") === "1";
+
+      if (isStandalone || isIOS) {
+        instalarBtn.classList.add("hidden");
+      }
+      if (isIOS && !isStandalone) {
+        iosHint.classList.remove("hidden");
+      }
+
+      let deferredPrompt = null;
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        if (!isStandalone) instalarBtn.classList.remove("hidden");
       });
+
+      instalarBtn.addEventListener("click", async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        instalarBtn.classList.add("hidden");
+      });
+
+      window.addEventListener("appinstalled", () => {
+        instalarBtn.classList.add("hidden");
+      });
+
+      // Ícone instalado (PWA) → vai direto ao runtime do GMP.
+      if (launchedFromPwa) {
+        window.location.replace(REAL_PLAY_URL);
+      }
+
+      // Service worker: cache SOMENTE assets estáticos da landing (sem dados do GMP).
+      if ("serviceWorker" in navigator && location.protocol === "https:") {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
     </script>
   </body>
 </html>
