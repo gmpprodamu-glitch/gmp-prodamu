@@ -1,0 +1,27 @@
+# Credenciais e segredos
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+secrets*
+credentials*
+token*
+*.msapp
+
+# Dados do GMP (nunca versionar)
+*.docx
+*.xlsx
+*.pdf
+*.csv
+dump*
+backup*
+
+# Artefatos locais
+node_modules/
+dist/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
